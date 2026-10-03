@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team & Roster Management</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: #1f2937;
+      color: white;
+    }
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    .team-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+    }
+    .badge-active { background-color: #d1fae5; color: #065f46; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+    .badge-inactive { background-color: #fee2e2; color: #991b1b; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+    .logout-btn {
+      padding: 0.5rem 1rem;
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>Club Team Portal</h2>
+    <button id="logout-btn" class="logout-btn">Log Out</button>
+  </header>
+
+  <div class="container">
+    
+    <!-- Multi-Team Selector -->
+    <div class="card">
+      <div class="team-selector-bar">
+        <label for="team-select"><strong>Select Squad:</strong></label>
+        <select id="team-select">
+          <option value="">-- Loading your teams --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Roster Management Card -->
+    <div class="card">
+      <h3 id="current-team-title">Squad Roster</h3>
+      <p style="color: #6b7280; font-size: 0.9rem;">Only players with an active 2026 membership can be selected for game days.</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Player Name</th>
+            <th>Membership Status</th>
+            <th>PVG / Credentials</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="roster-table-body">
+          <tr>
+            <td colspan="4" style="text-align: center; color: #6b7280;">Please select a team above.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+
+    const teamSelect = document.getElementById('team-select');
+    const rosterBody = document.getElementById('roster-table-body');
+    const teamTitle = document.getElementById('current-team-title');
+
+    async function initTeamDashboard() {
+      // 1. Get logged-in user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 2. Fetch all teams this user is allowed to manage 
+      // (If admin, they see all teams. If team rep, we match their user record)
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('role, team_id')
+        .eq('id', user.id)
+        .single();
+
+      let query = supabase.from('teams').select('*');
+      
+      // If they are a team rep rather than admin, restrict the dropdown to their assigned club/teams
+      if (userRecord && userRecord.role === 'team_rep' && userRecord.team_id) {
+        query = query.eq('id', userRecord.team_id);
+      }
+
+      const { data: teams, error } = await query;
+
+      if (error || !teams || teams.length === 0) {
+        teamSelect.innerHTML = `<option value="">No teams assigned to your account</option>`;
+        return;
+      }
+
+      // Populate dropdown with all available teams (e.g., Senior Men 1, Senior Men 2)
+      teamSelect.innerHTML = `<option value="">-- Select a team --</option>` + 
+        teams.map(t => `<option value="${t.id}">${t.name} (${t.division || 'General'})</option>`).join('');
+    }
+
+    // When the user changes the dropdown selection, load that specific team's roster
+    teamSelect.addEventListener('change', async (e) => {
+      const selectedTeamId = e.target.value;
+      if (!selectedTeamId) {
+        rosterBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Please select a team above.</td></tr>`;
+        return;
+      }
+
+      const selectedTeamName = teamSelect.options[teamSelect.selectedIndex].text;
+      teamTitle.innerText = `Roster for: ${selectedTeamName}`;
+      rosterBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Loading roster...</td></tr>`;
+
+      // Fetch players linked to this team via memberships for 2026
+      const { data: memberships, error } = await supabase
+        .from('memberships')
+        .select(`
+          status,
+          players ( id, first_name, last_name )
+        `)
+        .eq('team_id', selectedTeamId)
+        .eq('season_year', 2026);
+
+      if (error) {
+        rosterBody.innerHTML = `<tr><td colspan="4" style="color: red;">Error loading roster: ${error.message}</td></tr>`;
+        return;
+      }
+
+      if (!memberships || memberships.length === 0) {
+        rosterBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #6b7280;">No registered players found for this squad yet.</td></tr>`;
+        return;
+      }
+
+      // Render players into table
+      rosterBody.innerHTML = memberships.map(m => `
+        <tr>
+          <td><strong>${m.players.first_name} ${m.players.last_name}</strong></td>
+          <td><span class="${m.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${m.status}</span></td>
+          <td>Verified</td>
+          <td><button style="padding: 0.25rem 0.5rem; cursor: pointer;">Details</button></td>
+        </tr>
+      `).join('');
+    });
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = 'index.html';
+    });
+
+    initTeamDashboard();
+  </script>
+</body>
+</html>
