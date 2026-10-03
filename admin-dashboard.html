@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLBA League Administration</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      background-color: #f3f4f6;
+    }
+    .sidebar {
+      width: 260px;
+      background-color: #1f2937;
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      border-bottom: 1px solid #374151;
+    }
+    .nav-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex-grow: 1;
+    }
+    .nav-links li {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 1px solid #374151;
+    }
+    .nav-links li:hover {
+      background-color: #374151;
+    }
+    .logout-btn {
+      padding: 1rem;
+      background-color: #ef4444;
+      color: white;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      font-size: 1rem;
+    }
+    .main-content {
+      flex-grow: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <div class="sidebar-header">SLBA Admin Panel</div>
+    <ul class="nav-links">
+      <li>Teams & Squads</li>
+      <li>Player Directory</li>
+      <li>Membership & Eligibility</li>
+      <li>PVG & Credentials</li>
+    </ul>
+    <button id="logout-btn" class="logout-btn">Log Out</button>
+  </nav>
+
+  <main class="main-content">
+    <h1>League Teams Overview</h1>
+    <div class="card">
+      <h2>Registered Teams</h2>
+      <p>Manage all competing clubs and their multiple squads (e.g., Men's Div 1, Men's Div 2).</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Team / Squad Name</th>
+            <th>Division</th>
+            <th>Registered Players</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="teams-table-body">
+          <!-- Dynamically populated from Supabase -->
+          <tr>
+            <td colspan="4" style="text-align: center; color: #6b7280;">Loading teams...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+    
+    async function loadAdminData() {
+      const { data: teams, error } = await supabase.from('teams').select('*');
+      
+      const tbody = document.getElementById('teams-table-body');
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error loading teams: ${error.message}</td></tr>`;
+        return;
+      }
+
+      if (teams.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No teams found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = teams.map(team => `
+        <tr>
+          <td><strong>${team.name}</strong></td>
+          <td>${team.division || 'Unassigned'}</td>
+          <td>-</td>
+          <td><button style="padding: 0.25rem 0.5rem; cursor: pointer;">View Roster</button></td>
+        </tr>
+      `).join('');
+    }
+
+    loadAdminData();
+
+    document.getElementById('logout-end', document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = 'index.html';
+    }));
+  </script>
+</body>
+</html>
