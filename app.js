@@ -25,21 +25,35 @@ loginBtn.addEventListener('click', async () => {
   // 3. Look up their specific role in your custom 'users' table
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('role')
+    .select('role, team_id')
     .eq('id', userId)
     .single();
 
-  if (userError) {
-    alert('Could not verify user role: ' + userError.message);
+  // If they are an Admin or Team Rep (found in the 'users' table)
+  if (!userError && userData) {
+    if (userData.role === 'admin') {
+      window.location.href = 'admin-dashboard.html';
+      return;
+    } else if (userData.role === 'team_rep') {
+      localStorage.setItem('my_team_id', userData.team_id);
+      window.location.href = 'team-dashboard.html';
+      return;
+    }
+  }
+
+  // 4. If not found in the 'users' table, check if they are a linked Player
+  const { data: playerRecord, error: playerError } = await supabase
+    .from('players')
+    .select('id')
+    .eq('auth_id', userId)
+    .single();
+
+  if (!playerError && playerRecord) {
+    window.location.href = 'player-profile.html';
     return;
   }
 
-  // 4. Redirect them to the correct GitHub Pages HTML file based on their role
-  if (userData.role === 'admin') {
-    window.location.href = 'admin-dashboard.html';
-  } else if (userData.role === 'team_rep') {
-    window.location.href = 'team-dashboard.html';
-  } else {
-    alert('Error: Account has no assigned role.');
-  }
+  // 5. If they don't match any role or player profile, block login
+  alert('Error: Account has no assigned role or linked player profile.');
+  await supabase.auth.signOut();
 });
