@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courtside Login</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f3f4f6;
+    }
+    .login-card {
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 320px;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: #111827;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    input {
+      width: 100%;
+      padding: 0.625rem;
+      box-sizing: border-box;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      background-color: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <h2>Courtside Login</h2>
+    
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="coach@example.com" required>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" required>
+    </div>
+
+    <button id="login-btn">Log In</button>
+  </div>
+
+  <!-- Note: type="module" is required for ES Module imports -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
